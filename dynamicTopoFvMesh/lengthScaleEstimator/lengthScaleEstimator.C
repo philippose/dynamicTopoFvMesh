@@ -46,6 +46,11 @@ namespace Foam
 
 defineTypeNameAndDebug(lengthScaleEstimator,0);
 
+const wordList lengthScaleEstimator::fieldScaleMethods_
+(
+ IStringStream("(constant dirProportional invProportional)")()
+);
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 // Construct from polyMesh and dictionary
@@ -67,6 +72,7 @@ lengthScaleEstimator::lengthScaleEstimator
     sliceHoldOff_(0),
     sliceBoxes_(0),
     field_("none"),
+    fieldScaleMethod_(CONSTANT_SCALE),
     fieldLength_(0.0),
     lowerRefineLevel_(0.001),
     upperRefineLevel_(0.999),
@@ -549,6 +555,62 @@ void lengthScaleEstimator::readLengthScaleInfo
 }
 
 
+//Use a constant length scale for the field based refinement
+scalar lengthScaleEstimator::constantFieldScale(const scalar& fValue) const
+{
+    return fieldLength_;
+}
+
+
+// Use a direct proportional relationship for the field based refinement
+scalar lengthScaleEstimator::dirProportionalFieldScale(const scalar& fValue) const
+{
+    scalar currFldValue = fValue;
+
+    // If the field value is greater than the upper refinement limit, 
+    // set the cell to the mean length scale
+    if(currFldValue > upperRefineLevel_)
+    {
+        return meanScale_;
+    }
+
+    currFldValue = min(currFldValue,upperRefineLevel_);
+    currFldValue = max(currFldValue,lowerRefineLevel_);
+
+    scalar currLengthScale = (((currFldValue - lowerRefineLevel_)
+                               / (upperRefineLevel_ - lowerRefineLevel_))
+                              * (maxLengthScale_ - minLengthScale_))
+                             + minLengthScale_;
+
+    return currLengthScale;
+}
+
+
+// Use an inverse proportional relationship for the field based refinement
+scalar lengthScaleEstimator::invProportionalFieldScale(const scalar& fValue) const
+{
+    scalar currFldValue = fValue;
+
+    // If the field value is smaller than the lower refinement limit, 
+    // set the cell to the mean length scale
+    if(currFldValue < lowerRefineLevel_)
+    {
+        return meanScale_;
+    }
+
+    currFldValue = min(currFldValue,upperRefineLevel_);
+    currFldValue = max(currFldValue,lowerRefineLevel_);
+
+    scalar currLengthScale = ((1.0 - ((currFldValue - lowerRefineLevel_)
+                                      / (upperRefineLevel_ - lowerRefineLevel_))
+                              )
+                              * (maxLengthScale_ - minLengthScale_))
+                             + minLengthScale_;
+  
+    return currLengthScale;
+}
+    
+
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 // Read edge refinement options from the dictionary
@@ -765,6 +827,34 @@ void lengthScaleEstimator::readRefinementOptions
     {
         field_ = word(refineDict.lookup("fieldRefinement"));
 
+        // Lookup the the method used to interpret the field and 
+        // convert it to the corresponding enum value
+        word fieldScaleString = word(refineDict.lookup("fieldScaleMethod"));
+
+        fieldScaleMethod_ = lengthScaleEstimator::INVALID_METHOD;
+
+        for(int methInd = 0; methInd < lengthScaleEstimator::INVALID_METHOD; methInd++)
+        {
+            if(fieldScaleString == fieldScaleMethods_[methInd])
+            {
+                fieldScaleMethod_ = (lengthScaleEstimator::FieldScaleMethod)methInd;
+            }
+        }
+
+        // Perform sanity check on the scaling method
+        if(fieldScaleMethod_ == lengthScaleEstimator::INVALID_METHOD)
+        {
+            FatalErrorIn
+            (
+                "void lengthScaleEstimator::readRefinementOptions"
+                "(const dictionary&, bool, bool)"
+            )
+                << " Invalid field scaling method specified." << nl
+                << " valid methods are:" << nl
+                << fieldScaleMethods_ << nl
+                << abort(FatalError);
+        }
+
         // Lookup a specified length-scale
         fieldLength_ = readScalar(refineDict.lookup("fieldLengthScale"));
 
@@ -936,7 +1026,33 @@ void lengthScaleEstimator::calculateLengthScale
                 if (!cellLevels[ownCell])
                 {
                     cellLevels[ownCell] = level;
-                    lengthScale[ownCell] = fieldLength_;
+
+                    switch(fieldScaleMethod_)
+                    {
+                        case(lengthScaleEstimator::CONSTANT_SCALE):
+                        {
+                            lengthScale[ownCell] = constantFieldScale(fAvg);
+                            break;
+                        }
+
+                        case(lengthScaleEstimator::DIR_PROPORTIONAL_SCALE):
+                        {
+                            lengthScale[ownCell] = dirProportionalFieldScale(fAvg);
+                            break;
+                        }
+
+                        case(lengthScaleEstimator::INV_PROPORTIONAL_SCALE):
+                        {
+                            lengthScale[ownCell] = invProportionalFieldScale(fAvg);
+                            break;
+                        }
+
+                        default:
+                        {
+                            lengthScale[ownCell] = constantFieldScale(fAvg);
+                            break;
+                        }
+                    }
 
                     levelCells.insert(ownCell);
 
@@ -946,7 +1062,33 @@ void lengthScaleEstimator::calculateLengthScale
                 if (!cellLevels[neiCell])
                 {
                     cellLevels[neiCell] = level;
-                    lengthScale[neiCell] = fieldLength_;
+
+                    switch(fieldScaleMethod_)
+                    {
+                        case(lengthScaleEstimator::CONSTANT_SCALE):
+                        {
+                            lengthScale[neiCell] = constantFieldScale(fAvg);
+                            break;
+                        }
+
+                        case(lengthScaleEstimator::DIR_PROPORTIONAL_SCALE):
+                        {
+                            lengthScale[neiCell] = dirProportionalFieldScale(fAvg);
+                            break;
+                        }
+
+                        case(lengthScaleEstimator::INV_PROPORTIONAL_SCALE):
+                        {
+                            lengthScale[neiCell] = invProportionalFieldScale(fAvg);
+                            break;
+                        }
+
+                        default:
+                        {
+                            lengthScale[neiCell] = constantFieldScale(fAvg);
+                            break;
+                        }
+                    }
 
                     levelCells.insert(neiCell);
 

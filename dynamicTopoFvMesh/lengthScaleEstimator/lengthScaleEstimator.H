@@ -110,11 +110,23 @@ class lengthScaleEstimator
         labelList noModPatchIDs_;
 
         //- Field-based refinement
+        enum FieldScaleMethod
+        {
+            CONSTANT_SCALE = 0,
+            DIR_PROPORTIONAL_SCALE,
+            INV_PROPORTIONAL_SCALE,
+            INVALID_METHOD
+        };
+
         word field_;
         scalar fieldLength_;
         scalar lowerRefineLevel_;
         scalar upperRefineLevel_;
 
+        //- Specify the kind of scaling method to use
+        FieldScaleMethod fieldScaleMethod_;
+        static const wordList fieldScaleMethods_;
+      
         //- Specify limits for refinement criteria
         scalar meanScale_;
         label maxRefineLevel_;
@@ -153,6 +165,15 @@ class lengthScaleEstimator
             UList<scalar>& lengthScale,
             labelHashSet& levelCells
         ) const;
+
+        // Use a constant length scale for the field based refinement
+        scalar constantFieldScale(const scalar& fValue) const;
+
+        // Use a direct proportional relationship for the field based refinement
+        scalar dirProportionalFieldScale(const scalar& fValue) const;
+        
+        // Use an inverse proportional relationship for the field based refinement
+        scalar invProportionalFieldScale(const scalar& fValue) const;
 
 public:
 
