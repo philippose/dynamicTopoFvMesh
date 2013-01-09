@@ -4475,9 +4475,17 @@ void dynamicTopoFvMesh::mapFields(const mapPolyMesh& mpm) const
     // Set the mapPolyMesh object in the mapper
     fieldMapper.setMapper(mpm);
 
+    // Philippose(09.01.2013)
+    // Temporarily disabling conservative mapping due to 
+    // issues with turbulence models 
     // Conservatively map scalar/vector volFields
-    conservativeMapVolFields<scalar>(fieldMapper);  
-    conservativeMapVolFields<vector>(fieldMapper);
+    //conservativeMapVolFields<scalar>(fieldMapper);  
+    //conservativeMapVolFields<vector>(fieldMapper);
+
+    MapGeometricFields<scalar, fvPatchField, topoMapper, volMesh>
+        (fieldMapper);
+    MapGeometricFields<vector, fvPatchField, topoMapper, volMesh>
+        (fieldMapper);
 
     // Map all the volFields in the objectRegistry
     MapGeometricFields<sphericalTensor,fvPatchField,topoMapper,volMesh>
@@ -4487,9 +4495,17 @@ void dynamicTopoFvMesh::mapFields(const mapPolyMesh& mpm) const
     MapGeometricFields<tensor,fvPatchField,topoMapper,volMesh>
         (fieldMapper);
 
+    // Philippose(09.01.2013)
+    // Temporarily disabling conservative mapping due to 
+    // issues with turbulence models 
     // Conservatively map scalar/vector surfaceFields
-    conservativeMapSurfaceFields<scalar>(fieldMapper);
-    conservativeMapSurfaceFields<vector>(fieldMapper);
+    //conservativeMapSurfaceFields<scalar>(fieldMapper);
+    //conservativeMapSurfaceFields<vector>(fieldMapper);
+
+    MapGeometricFields<scalar, fvsPatchField, topoMapper, surfaceMesh>
+        (fieldMapper);
+    MapGeometricFields<vector, fvsPatchField, topoMapper, surfaceMesh>
+        (fieldMapper);
 
     // Map all the surfaceFields in the objectRegistry
     MapGeometricFields<sphericalTensor,fvsPatchField,topoMapper,surfaceMesh>
