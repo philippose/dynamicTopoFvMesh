@@ -7,7 +7,7 @@ EXE_INC = \
     $(WM_DECOMP_INC)
 
 EXE_LIBS = \
-    -L$(FOAM_USER_LIBBIN) \
+    -L$(FOAM_SITE_LIBBIN) \
     -lconservativeMeshToMesh \
     -lsampling \
     -lfiniteVolume \
