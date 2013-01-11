@@ -3,6 +3,6 @@ EXE_INC = \
     -I$(LIB_SRC)/finiteVolume/lnInclude
 
 LIB_LIBS = \
-    -L$(FOAM_USER_LIBBIN) \
+    -L$(FOAM_SITE_LIBBIN) \
     -ldynamicTopoFvMesh \
     -lfiniteVolume
