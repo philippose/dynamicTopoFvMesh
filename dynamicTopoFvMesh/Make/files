@@ -36,4 +36,4 @@ $(tetMetrics)/tetMetrics.C
 lengthScaleEstimator = lengthScaleEstimator
 $(lengthScaleEstimator)/lengthScaleEstimator.C
 
-LIB = $(FOAM_USER_LIBBIN)/libdynamicTopoFvMesh
+LIB = $(FOAM_SITE_LIBBIN)/libdynamicTopoFvMesh
