@@ -556,14 +556,17 @@ void lengthScaleEstimator::readLengthScaleInfo
 
 
 //Use a constant length scale for the field based refinement
-scalar lengthScaleEstimator::constantFieldScale(const scalar& fValue) const
+void lengthScaleEstimator::constantFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID)
 {
-    return fieldLength_;
+    if((fValue > lowerRefineLevel_) && (fValue < upperRefineLevel_))
+    {
+        lengthScale[cellID] = fieldLength_;
+    }
 }
 
 
 // Use a direct proportional relationship for the field based refinement
-scalar lengthScaleEstimator::dirProportionalFieldScale(const scalar& fValue) const
+void lengthScaleEstimator::dirProportionalFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID)
 {
     scalar currFldValue = fValue;
 
@@ -571,7 +574,8 @@ scalar lengthScaleEstimator::dirProportionalFieldScale(const scalar& fValue) con
     // set the cell to the mean length scale
     if(currFldValue > upperRefineLevel_)
     {
-        return meanScale_;
+        lengthScale[cellID] = max(maxLengthScale_,meanScale_);
+        return;
     }
 
     currFldValue = min(currFldValue,upperRefineLevel_);
@@ -582,12 +586,12 @@ scalar lengthScaleEstimator::dirProportionalFieldScale(const scalar& fValue) con
                               * (maxLengthScale_ - minLengthScale_))
                              + minLengthScale_;
 
-    return currLengthScale;
+    lengthScale[cellID] = currLengthScale;
 }
 
 
 // Use an inverse proportional relationship for the field based refinement
-scalar lengthScaleEstimator::invProportionalFieldScale(const scalar& fValue) const
+void lengthScaleEstimator::invProportionalFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID)
 {
     scalar currFldValue = fValue;
 
@@ -595,7 +599,8 @@ scalar lengthScaleEstimator::invProportionalFieldScale(const scalar& fValue) con
     // set the cell to the mean length scale
     if(currFldValue < lowerRefineLevel_)
     {
-        return meanScale_;
+//        lengthScale[cellID] = max(maxLengthScale_, meanScale_);
+        return;
     }
 
     currFldValue = min(currFldValue,upperRefineLevel_);
@@ -607,7 +612,7 @@ scalar lengthScaleEstimator::invProportionalFieldScale(const scalar& fValue) con
                               * (maxLengthScale_ - minLengthScale_))
                              + minLengthScale_;
   
-    return currLengthScale;
+    lengthScale[cellID] = currLengthScale;
 }
     
 
@@ -1020,80 +1025,77 @@ void lengthScaleEstimator::calculateLengthScale
 
             scalar fAvg = 0.5 * (vFld[ownCell] + vFld[neiCell]);
 
-            if ((fAvg > lowerRefineLevel_) && (fAvg < upperRefineLevel_))
+            // Set the scale for cells on either side
+            if (!cellLevels[ownCell])
             {
-                // Set the scale for cells on either side
-                if (!cellLevels[ownCell])
+                cellLevels[ownCell] = level;
+
+                switch(fieldScaleMethod_)
                 {
-                    cellLevels[ownCell] = level;
-
-                    switch(fieldScaleMethod_)
+                    case(lengthScaleEstimator::CONSTANT_SCALE):
                     {
-                        case(lengthScaleEstimator::CONSTANT_SCALE):
-                        {
-                            lengthScale[ownCell] = constantFieldScale(fAvg);
-                            break;
-                        }
-
-                        case(lengthScaleEstimator::DIR_PROPORTIONAL_SCALE):
-                        {
-                            lengthScale[ownCell] = dirProportionalFieldScale(fAvg);
-                            break;
-                        }
-
-                        case(lengthScaleEstimator::INV_PROPORTIONAL_SCALE):
-                        {
-                            lengthScale[ownCell] = invProportionalFieldScale(fAvg);
-                            break;
-                        }
-
-                        default:
-                        {
-                            lengthScale[ownCell] = constantFieldScale(fAvg);
-                            break;
-                        }
+                        constantFieldScale(lengthScale, fAvg, ownCell);
+                        break;
                     }
 
-                    levelCells.insert(ownCell);
-
-                    visitedCells++;
-                }
-
-                if (!cellLevels[neiCell])
-                {
-                    cellLevels[neiCell] = level;
-
-                    switch(fieldScaleMethod_)
+                    case(lengthScaleEstimator::DIR_PROPORTIONAL_SCALE):
                     {
-                        case(lengthScaleEstimator::CONSTANT_SCALE):
-                        {
-                            lengthScale[neiCell] = constantFieldScale(fAvg);
-                            break;
-                        }
-
-                        case(lengthScaleEstimator::DIR_PROPORTIONAL_SCALE):
-                        {
-                            lengthScale[neiCell] = dirProportionalFieldScale(fAvg);
-                            break;
-                        }
-
-                        case(lengthScaleEstimator::INV_PROPORTIONAL_SCALE):
-                        {
-                            lengthScale[neiCell] = invProportionalFieldScale(fAvg);
-                            break;
-                        }
-
-                        default:
-                        {
-                            lengthScale[neiCell] = constantFieldScale(fAvg);
-                            break;
-                        }
+                        dirProportionalFieldScale(lengthScale, fAvg, ownCell);
+                        break;
                     }
 
-                    levelCells.insert(neiCell);
+                    case(lengthScaleEstimator::INV_PROPORTIONAL_SCALE):
+                    {
+                        invProportionalFieldScale(lengthScale, fAvg, ownCell);
+                        break;
+                    }
 
-                    visitedCells++;
+                    default:
+                    {
+                        constantFieldScale(lengthScale, fAvg, ownCell);
+                        break;
+                    }
                 }
+
+                levelCells.insert(ownCell);
+
+                visitedCells++;
+            }
+
+            if (!cellLevels[neiCell])
+            {
+                cellLevels[neiCell] = level;
+
+                switch(fieldScaleMethod_)
+                {
+                    case(lengthScaleEstimator::CONSTANT_SCALE):
+                    {
+                        constantFieldScale(lengthScale, fAvg, neiCell);
+                        break;
+                    }
+
+                    case(lengthScaleEstimator::DIR_PROPORTIONAL_SCALE):
+                    {
+                        dirProportionalFieldScale(lengthScale, fAvg, neiCell);
+                        break;
+                    }
+
+                    case(lengthScaleEstimator::INV_PROPORTIONAL_SCALE):
+                    {
+                        invProportionalFieldScale(lengthScale, fAvg, neiCell);
+                        break;
+                    }
+
+                    default:
+                    {
+                        constantFieldScale(lengthScale, fAvg, neiCell);
+                        break;
+                    }
+                }
+
+                levelCells.insert(neiCell);
+
+                visitedCells++;
             }
         }
     }
