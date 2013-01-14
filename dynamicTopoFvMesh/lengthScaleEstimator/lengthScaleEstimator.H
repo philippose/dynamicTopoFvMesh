@@ -167,13 +167,13 @@ class lengthScaleEstimator
         ) const;
 
         // Use a constant length scale for the field based refinement
-        void constantFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID);
+        bool constantFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID);
 
         // Use a direct proportional relationship for the field based refinement
-        void dirProportionalFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID);
+        bool dirProportionalFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID);
         
         // Use an inverse proportional relationship for the field based refinement
-        void invProportionalFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID);
+        bool invProportionalFieldScale(UList<scalar>& lengthScale, const scalar& fValue, const label& cellID);
 
 public:
 
