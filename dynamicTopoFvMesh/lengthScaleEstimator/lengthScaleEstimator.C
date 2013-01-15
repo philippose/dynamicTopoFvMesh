@@ -1091,7 +1091,7 @@ void lengthScaleEstimator::calculateLengthScale
 
                     case(lengthScaleEstimator::INV_PROPORTIONAL_SCALE):
                     {
-                        neiCellmodified = invProportionalFieldScale(lengthScale, fAvg, neiCell);
+                        neiCellModified = invProportionalFieldScale(lengthScale, fAvg, neiCell);
                         break;
                     }
 
